@@ -92,8 +92,12 @@ public class MeasureAspect {
     }
 
     // Part 1.3: Check for negative values (includes constructor initialization)
+    // Only applies to fields with measure units
     @Around("set(* *) && target(inf222.aop.measures.Measures)")
     public Object checkNegativeValues(ProceedingJoinPoint jp) throws Throwable {
+        // Get the field name from the join point signature
+        String fieldName = jp.getSignature().getName();
+        
         // Get the new value being set (first argument)
         Object[] args = jp.getArgs();
         if (args.length == 0 || !(args[0] instanceof Double)) {
@@ -101,12 +105,16 @@ public class MeasureAspect {
         }
         Double newValue = (Double) args[0];
         
-        // Check if the value is negative
-        if (newValue < 0) {
-            throw new Error("Illegal modification");
+        // Only check for negative values if the field has a measure unit
+        Matcher matcher = pattern.matcher(fieldName);
+        if (matcher.matches()) {
+            // Check if the value is negative
+            if (newValue < 0) {
+                throw new Error("Illegal modification");
+            }
         }
         
-        // Proceed normally
+        // Proceed normally (for fields without measure units, or if value is positive)
         return jp.proceed();
     }
 
