@@ -54,6 +54,7 @@ public class MeasureAspect {
         return jp.proceed();
     }
 
+    // Part 1.2: Convert from meters back to original measure (excludes constructor initialization)
     @Around("set(* *) && target(inf222.aop.measures.Measures) && !cflow(execution(inf222.aop.measures.Measures.new(..)))")
     public Object convertFromMeters(ProceedingJoinPoint jp) throws Throwable {
         // Get the field name from the join point signature
@@ -65,11 +66,6 @@ public class MeasureAspect {
             return jp.proceed();
         }
         Double newValue = (Double) args[0];
-        
-        // Part 1.3: Check if the value is negative
-        if (newValue < 0) {
-            throw new Error("Illegal modification");
-        }
         
         // Check if the field name matches our pattern
         Matcher matcher = pattern.matcher(fieldName);
@@ -91,7 +87,26 @@ public class MeasureAspect {
             }
         }
         
-        // If no match, proceed normally
+        // If no match (field doesn't have measure unit), proceed normally
+        return jp.proceed();
+    }
+
+    // Part 1.3: Check for negative values (includes constructor initialization)
+    @Around("set(* *) && target(inf222.aop.measures.Measures)")
+    public Object checkNegativeValues(ProceedingJoinPoint jp) throws Throwable {
+        // Get the new value being set (first argument)
+        Object[] args = jp.getArgs();
+        if (args.length == 0 || !(args[0] instanceof Double)) {
+            return jp.proceed();
+        }
+        Double newValue = (Double) args[0];
+        
+        // Check if the value is negative
+        if (newValue < 0) {
+            throw new Error("Illegal modification");
+        }
+        
+        // Proceed normally
         return jp.proceed();
     }
 
